@@ -23,7 +23,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.6.1'
+        self.version = '0.6.2'
         self.title('Check Sammy %s' % self.version)
         self.iconbitmap(os.path.abspath('media/paw.ico'))
 
@@ -167,15 +167,20 @@ class SammyGUI(tk.Tk):
         self.report_window.iconbitmap(os.path.abspath('media/paw.ico'))
         self.report_window.title('Report')
 
-        self.report_text = tk.Text(self.report_window,width=100,height=30,state=DISABLED,wrap=WORD)
+        self.report_yscrollbar = tk.Scrollbar(self.report_window,orient='vertical')
+        self.report_yscrollbar.grid(row=0,column=1,sticky='NS')
+
+        self.report_text = tk.Text(self.report_window,width=100,height=30,yscrollcommand=self.report_yscrollbar.set,state=DISABLED,wrap=WORD)
         self.report_text.grid(row=0,column=0)
 
+        self.report_yscrollbar.configure(command=self.report_text.yview)
+
         self.report_button = tk.Button(self.report_window,text='Save report',command=self.save_report)
-        self.report_button.grid(row=1,column=0)
+        self.report_button.grid(row=1,column=0,pady=5)
 
         self.report_text.configure(state=NORMAL)
         self.report_text.delete(1.0,END)
-        self.report_text.insert(END,'Summary:\n\n---\n%s files/folders checked.\n---\n\nOk: %s.\nCorrupted: %s.\nMissing: %s.\nNew/Unknown: %s.\n---\n\n' % (str(tot),str(ok),str(corr),str(missing),str(new)))
+        self.report_text.insert(END,'Fixity check summary:\n\n---\n%s files/folders checked.\n---\n\nOk: %s.\nCorrupted: %s.\nMissing: %s.\nNew/Unknown: %s.\n---\n\n' % (str(tot),str(ok),str(corr),str(missing),str(new)))
 
         if no_cs > 0:
             self.report_text.insert(END,"Sammy couldn't find a valid .md5 for %s files/folders.\n------------\n\n\n" % str(no_cs))
@@ -314,7 +319,7 @@ class CheckSammy():
                 else:
                     puppy.checked['Corrupted'].append(ff)
             except FileNotFoundError:
-                puppy.checked['No md5'].append(ff)
+                puppy.checked['No md5'].append(ff+'.md5')
 
         elif switch == 1:
             try:
@@ -328,20 +333,20 @@ class CheckSammy():
 
                 for obj in old_hash_dict:
                     if not obj in new_hash_dict:
-                        puppy.checked['Missing file'].append(obj)
+                        puppy.checked['Missing file'].append(os.path.join(new_hash_dict['PARENT FOLDER'],obj))
 
                 for obj in new_hash_dict:
                     if not obj in old_hash_dict:
-                        puppy.checked['New file'].append(obj)
+                        puppy.checked['New file'].append(os.path.join(new_hash_dict['PARENT FOLDER'],obj))
                     else:
                         if new_hash_dict[obj] == old_hash_dict[obj]:
                             if obj != 'PARENT FOLDER':
-                                puppy.checked['Ok'].append(obj)
+                                puppy.checked['Ok'].append(os.path.join(new_hash_dict['PARENT FOLDER'],obj))
                         else:
-                            puppy.checked['Corrupted'].append(obj)
+                            puppy.checked['Corrupted'].append(os.path.join(new_hash_dict['PARENT FOLDER'],obj))
 
             except FileNotFoundError:
-                puppy.checked['No md5'].append(ff)
+                puppy.checked['No md5'].append(ff+'.md5')
 
     def save_md5(self,file):
         # Starts the calc_md5 method and stores the results in a dictionary.
