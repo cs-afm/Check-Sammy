@@ -28,7 +28,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.6.3'
+        self.version = '0.6.4'
         self.title('Check Sammy %s' % self.version)
         self.iconbitmap(os.path.abspath('media/paw.ico'))
 
@@ -354,11 +354,11 @@ class CheckSammy():
                 old_cs = json.load(open(ff + '.md5'))[os.path.basename(ff)]
                 new_cs = self.calc_md5(ff)
                 if old_cs == new_cs:
-                    puppy.checked['Ok'].append(ff)
+                    puppy.checked['Ok'].append(os.path.basename(ff))
                 else:
-                    puppy.checked['Corrupted'].append(ff)
+                    puppy.checked['Corrupted'].append(os.path.basename(ff))
             except FileNotFoundError:
-                puppy.checked['No md5'].append(ff + '.md5')
+                puppy.checked['No md5'].append(os.path.basename(ff) + '.md5')
 
         elif switch == 1:
             try:
@@ -390,7 +390,7 @@ class CheckSammy():
                                 os.path.join(new_hash_dict['PARENT FOLDER'], obj))
 
             except FileNotFoundError:
-                puppy.checked['No md5'].append(ff + '.md5')
+                puppy.checked['No md5'].append(os.path.join(new_hash_dict['PARENT FOLDER'], ff) + '.md5')
 
     def save_md5(self, file):
         # Starts the calc_md5 method and stores the results in a dictionary.
