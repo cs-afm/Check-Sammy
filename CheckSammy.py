@@ -19,6 +19,7 @@ import hashlib
 import json
 import threading
 import datetime
+import platform
 
 
 class SammyGUI(tk.Tk):
@@ -28,7 +29,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.6.5'
+        self.version = '0.6.6'
         self.title('Check Sammy %s' % self.version)
         self.iconbitmap(os.path.abspath('media/paw.ico'))
 
@@ -365,6 +366,14 @@ class CheckSammy():
             new_hash_dict['PARENT FOLDER'] = os.path.basename(ff)
             try:
                 old_hash_dict = json.load(open(ff + '.md5'))
+
+                if platform.system != 'Windows':
+                    darwin_hash_dict = {}
+                    for key in old_hash_dict.keys():
+                        new_key = key.replace('\\','/')
+                        darwin_hash_dict[new_key] = old_hash_dict[key]
+                    old_hash_dict = darwin_hash_dict
+
                 for root, folders, files in os.walk(ff):
                     for file in files:
                         to_hash = os.path.join(root, file)
