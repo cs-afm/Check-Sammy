@@ -367,7 +367,7 @@ class CheckSammy():
             try:
                 old_hash_dict = json.load(open(ff + '.md5'))
 
-                if platform.system != 'Windows':
+                if platform.system() != 'Windows':
                     darwin_hash_dict = {}
                     for key in old_hash_dict.keys():
                         new_key = key.replace('\\','/')
