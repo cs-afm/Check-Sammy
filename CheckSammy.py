@@ -19,7 +19,7 @@ import hashlib
 import json
 import threading
 import datetime
-import platform
+import shutil
 
 
 class SammyGUI(tk.Tk):
@@ -29,9 +29,10 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.6.6'
+        self.version = '0.7.2'
         self.title('Check Sammy %s' % self.version)
         self.iconbitmap(os.path.abspath('media/paw.ico'))
+        self.resizable(False,False)
 
         self.check_this = {'F': [], 'D': []}
         self.checked = {'Ok': [], 'Corrupted': [],
@@ -73,19 +74,23 @@ class SammyGUI(tk.Tk):
 
         self.batch_yscrollbar = tk.Scrollbar(
             self.batch_frame, orient='vertical')
-        self.batch_yscrollbar.grid(row=1, column=2, rowspan=2, sticky='NS')
+        self.batch_yscrollbar.grid(row=1, column=3, rowspan=2, sticky='NS')
 
         self.batch_xscrollbar = tk.Scrollbar(
             self.batch_frame, orient='horizontal')
-        self.batch_xscrollbar.grid(row=2, column=0, columnspan=2, sticky='WE')
+        self.batch_xscrollbar.grid(row=2, column=0, columnspan=3, sticky='WE')
 
         self.batch_label = tk.Label(
             self.batch_frame, text='Queue (0)', borderwidth=4, relief='groove', width=100)
-        self.batch_label.grid(row=0, column=1, sticky='W', pady=5)
+        self.batch_label.grid(row=0, column=2, sticky='W', pady=5)
 
-        self.batch_button = tk.Button(
+        self.batch_delete_button = tk.Button(
             self.batch_frame, text='Delete', command=self.delete_item)
-        self.batch_button.grid(row=0, column=0, sticky='W', pady=5, padx=10)
+        self.batch_delete_button.grid(row=0, column=0, sticky='W', pady=5, padx=10)
+
+        self.batch_tranfer_button = tk.Button(
+            self.batch_frame, text='Safe transfer', command=self.open_safeTransfer)
+        self.batch_tranfer_button.grid(row=0, column=1, sticky='W', pady=5, padx=10)
 
         self.batch_listbox = tk.Listbox(self.batch_frame, yscrollcommand=self.batch_yscrollbar.set,
                                         xscrollcommand=self.batch_xscrollbar.set, width=180, height=23)
@@ -94,7 +99,7 @@ class SammyGUI(tk.Tk):
         self.batch_yscrollbar.configure(command=self.batch_listbox.yview)
         self.batch_xscrollbar.configure(command=self.batch_listbox.xview)
 
-        self.batch_listbox.grid(row=1, column=0, columnspan=2)
+        self.batch_listbox.grid(row=1, column=0, columnspan=3)
 
         self.batch_frame.bind(
             '<Leave>', lambda x: self.batch_listbox.selection_clear(0, END))
@@ -114,6 +119,31 @@ class SammyGUI(tk.Tk):
                                          value=2, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.difference.grid(row=2, column=0, sticky='w')
         self.difference.grid(row=3, column=0, sticky='w')
+
+    def open_safeTransfer(self):
+        x = self.winfo_x()
+        y = self.winfo_y()
+
+        self.transfer_window = tk.Toplevel()
+        self.transfer_window.grab_set()
+        self.transfer_window.geometry(f'650x160+{x+145}+{y+80}')
+        self.transfer_window.resizable(False, False)
+
+        self.transfer_dst_button = tk.Button(self.transfer_window, text='Select target folder:',command=self.select_dst)
+        self.transfer_dst_button.grid(row=0,column=0,padx=20,pady=20,sticky='n')
+
+        self.transfer_dst_entry = tk.Entry(self.transfer_window,state=DISABLED,width=100)
+        self.transfer_dst_entry.grid(row=1,column=0,sticky='n',padx=20)
+
+        self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=self.safe_transfer)
+        self.transfer_start_button.grid(row=2,column=0,padx=20,pady=20,sticky='n')
+
+    def select_dst(self):
+        dst = filedialog.askdirectory()
+
+        self.transfer_dst_entry.configure(state=NORMAL)
+        self.transfer_dst_entry.insert(0,dst)
+        self.transfer_dst_entry.configure(state=DISABLED)
 
     def delete_item(self):
         # Deletes the selected item from the batch listbox.
@@ -158,11 +188,11 @@ class SammyGUI(tk.Tk):
             root, dirs, files = next(os.walk(dir))
             for d in dirs:
                 self.check_this['D'].append(
-                    os.path.abspath(os.path.join(root, d)))
+                    os.path.abspath(self.checksummer.join_path(root, d)))
             for f in files:
                 if not '.md5' in f:
                     self.check_this['F'].append(
-                        os.path.abspath(os.path.join(root, f)))
+                        os.path.abspath(self.checksummer.join_path(root, f)))
             self.update_batch()
 
     def update_batch(self):
@@ -179,7 +209,7 @@ class SammyGUI(tk.Tk):
         self.batch_label.configure(text='Queue (%s)' %
                                    str(self.batch_listbox.size()))
 
-    def report(self):
+    def report(self,transfer=False):
         # Generates the report of the fixity check.
         ok = len(self.checked['Ok'])
         corr = len(self.checked['Corrupted'])
@@ -208,8 +238,9 @@ class SammyGUI(tk.Tk):
 
         self.report_text.configure(state=NORMAL)
         self.report_text.delete(1.0, END)
-        self.report_text.insert(END, 'Fixity check summary:\n\n---\n%s files/folders checked.\n---\n\nOk: %s.\nCorrupted: %s.\nMissing: %s.\nNew/Unknown: %s.\n---\n\n' %
-                                (str(tot), str(ok), str(corr), str(missing), str(new)))
+        operation = 'checked' if transfer == False else 'transferred'
+        self.report_text.insert(END, 'Fixity check summary:\n\n---\n%s files/folders %s.\n---\n\nOk: %s.\nCorrupted: %s.\nMissing: %s.\nNew/Unknown: %s.\n---\n\n' %
+                                (str(tot), operation, str(ok), str(corr), str(missing), str(new)))
 
         if no_cs > 0:
             self.report_text.insert(
@@ -285,59 +316,125 @@ class SammyGUI(tk.Tk):
             self.status_label.configure(text='Batch empty')
         else:
             if self.sel_operation.get() == 1:
-                self.status_label.configure(text='Working...')
-
-                before = datetime.datetime.now()
-                workers = mp.Pool(8)
-
-                workers.map(self.checksummer.save_md5, self.check_this['F'])
-
-                for dir in self.check_this['D']:
-                    self.hash_dict = {}
-                    self.hash_dict['PARENT FOLDER'] = os.path.basename(dir)
-                    for root, folders, files in os.walk(dir):
-                        a = []
-                        for file in files:
-                            to_hash = os.path.join(root, file)
-                            a.append((dir, to_hash))
-
-                        workers.starmap(self.checksummer.get_hash_dict, a)
-
-                    js = json.dumps(self.hash_dict, indent=4)
-                    with open(dir + '.md5', 'w+') as dot_md5:
-                        dot_md5.write(js)
-
-                workers.close()
-                workers.join()
-
-                print('Finished after: ' + str(datetime.datetime.now() - before))
-                self.status_label.configure(text='Done')
+                self.create_md5()
 
             elif self.sel_operation.get() == 2:
-                self.status_label.configure(text='Working...')
-
-                workers = mp.Pool(8)
-
-                workers.map(self.checksummer.check_md5, self.check_this['F'])
-
-                a = []
-                for dir in self.check_this['D']:
-                    a.append((dir, 1))
-
-                workers.starmap(self.checksummer.check_md5, a)
-
-                workers.close()
-                workers.join()
-
-                self.report()
-                self.status_label.configure(text='Done')
+                self.compare_md5()
 
             else:
                 self.status_label.configure(text="Sammy's confused...")
 
+    def create_md5(self,transfer=False,dst=None):
+        self.status_label.configure(text='Working...')
+
+        before = datetime.datetime.now()
+        workers = mp.Pool(8)
+
+        if transfer == False:
+            workers.map(self.checksummer.save_md5, self.check_this['F'])
+        else:
+            args = []
+            for file in self.check_this['F']:
+                args.append((file,dst))
+            workers.starmap(self.checksummer.transfer_save_md5, args)
+
+        for dir in self.check_this['D']:
+            self.hash_dict = {}
+            self.hash_dict['PARENT FOLDER'] = os.path.basename(dir)
+            for root, folders, files in os.walk(dir):
+                a = []
+                for file in files:
+                    to_hash = self.checksummer.join_path(root, file)
+                    a.append((dir, to_hash))
+
+                workers.starmap(self.checksummer.get_hash_dict, a)
+
+            js = json.dumps(self.hash_dict, indent=4)
+            if transfer == False:
+                with open(dir + '.md5', 'w+') as dot_md5:
+                    dot_md5.write(js)
+            else:
+                path = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
+                with open(path + '.md5', 'w+') as dot_md5:
+                    dot_md5.write(js)
+
+        workers.close()
+        workers.join()
+
+        print('Finished after: ' + str(datetime.datetime.now() - before))
+        self.status_label.configure(text='Done')
+
+    def compare_md5(self,transfer=False,check_transferred=None):
+        self.status_label.configure(text='Working...')
+        to_check = self.check_this if transfer == False else check_transferred
+
+        workers = mp.Pool(8)
+
+        workers.map(self.checksummer.check_md5, to_check['F'])
+
+        a = []
+        for dir in to_check['D']:
+            a.append((dir, 1))
+
+        workers.starmap(self.checksummer.check_md5, a)
+
+        workers.close()
+        workers.join()
+
+        self.report(transfer)
+        self.status_label.configure(text='Done')
+
+    def safe_transfer(self):
+        if self.transfer_dst_entry.get() != '':
+            dst = self.transfer_dst_entry.get()
+            self.transfer_window.destroy()
+
+            try:
+                if self.check_this == {'F': [], 'D': []}:
+                    self.status_label.configure(text='Batch empty')
+                else:
+                    check_transferred = {'F': [], 'D': []}
+                    print('Calculating checksums...')
+                    self.create_md5(True,dst)
+                    print('Done\n')
+                    print('Transferring files...')
+
+                    for file in self.check_this['F']:
+                        new_copy = self.checksummer.join_path(dst,file.split(os.sep)[-1])
+                        if not os.path.isfile(self.checksummer.join_path(dst,file.split(os.sep)[-1])):
+                            shutil.copy(file,dst)
+                        else:
+                            raise FileExistsError
+                        check_transferred['F'].append(new_copy)
+                    print('Done\n')
+                    print('Transferring folders...')
+
+                    for dir in self.check_this['D']:
+                        new_copy = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
+                        shutil.copytree(dir,new_copy)
+                        check_transferred['D'].append(new_copy)
+                    print('Done\n')
+                    print('Comparing difference...')
+
+                    self.compare_md5(True,check_transferred)
+                    print('Done')
+                    print('----------')
+
+            except FileExistsError:
+                print('The destination directory is not empty')
+
+
+
+
+
+
+
 
 class CheckSammy():
     # This class is the actual 'checksum' handler.
+    def join_path(self,a,b):
+        return a + '/' + b
+
     def calc_md5(self, file):
         # Calculates the md5 for the selected file.
         h = hashlib.md5()
@@ -367,36 +464,29 @@ class CheckSammy():
             try:
                 old_hash_dict = json.load(open(ff + '.md5'))
 
-                if platform.system() != 'Windows':
-                    darwin_hash_dict = {}
-                    for key in old_hash_dict.keys():
-                        new_key = key.replace('\\','/')
-                        darwin_hash_dict[new_key] = old_hash_dict[key]
-                    old_hash_dict = darwin_hash_dict
-
                 for root, folders, files in os.walk(ff):
                     for file in files:
-                        to_hash = os.path.join(root, file)
+                        to_hash = self.join_path(root, file)
                         new_hash_dict[to_hash.replace(
                             ff, '')[1:]] = self.calc_md5(to_hash)
 
                 for obj in old_hash_dict:
                     if not obj in new_hash_dict:
                         puppy.checked['Missing file'].append(
-                            os.path.join(new_hash_dict['PARENT FOLDER'], obj))
+                            self.join_path(new_hash_dict['PARENT FOLDER'], obj))
 
                 for obj in new_hash_dict:
                     if not obj in old_hash_dict:
                         puppy.checked['New file'].append(
-                            os.path.join(new_hash_dict['PARENT FOLDER'], obj))
+                            self.join_path(new_hash_dict['PARENT FOLDER'], obj))
                     else:
                         if new_hash_dict[obj] == old_hash_dict[obj]:
                             if obj != 'PARENT FOLDER':
-                                puppy.checked['Ok'].append(os.path.join(
+                                puppy.checked['Ok'].append(self.join_path(
                                     new_hash_dict['PARENT FOLDER'], obj))
                         else:
                             puppy.checked['Corrupted'].append(
-                                os.path.join(new_hash_dict['PARENT FOLDER'], obj))
+                                self.join_path(new_hash_dict['PARENT FOLDER'], obj))
 
             except FileNotFoundError:
                 puppy.checked['No md5'].append(new_hash_dict['PARENT FOLDER'] + '.md5')
@@ -411,9 +501,20 @@ class CheckSammy():
         with open(file + '.md5', 'w+') as dot_md5:
             dot_md5.write(js)
 
+    def transfer_save_md5(self, file, dst):
+        # Starts the calc_md5 method and stores the results in a dictionary.
+        # Then dumps the dictionary into a json file in the dst folder.
+        hash_dict = {}
+        hash_dict[os.path.basename(file)] = self.calc_md5(file)
+
+        js = json.dumps(hash_dict, indent=4)
+        path = self.join_path(dst,file.split(os.sep)[-1])
+        with open(path + '.md5', 'w+') as dot_md5:
+            dot_md5.write(js)
+
     def get_hash_dict(self, dir, to_hash):
         # Starts the calc_md5 method and stores the results in a dictionary.
-        puppy.hash_dict[to_hash.replace(dir, '')[1:]] = self.calc_md5(to_hash)
+        puppy.hash_dict[to_hash.replace(dir, '')[1:].replace(os.sep,'/')] = self.calc_md5(to_hash)
 
 
 puppy = SammyGUI()
