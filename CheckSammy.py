@@ -29,7 +29,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.7.2'
+        self.version = '0.7.3'
         self.title('Check Sammy %s' % self.version)
         self.iconbitmap(os.path.abspath('media/paw.ico'))
         self.resizable(False,False)
@@ -89,7 +89,8 @@ class SammyGUI(tk.Tk):
         self.batch_delete_button.grid(row=0, column=0, sticky='W', pady=5, padx=10)
 
         self.batch_tranfer_button = tk.Button(
-            self.batch_frame, text='Safe transfer', command=self.open_safeTransfer)
+            self.batch_frame, text='Safe transfer', command=lambda: threading.Thread(
+                target=self.open_safeTransfer, args=()).start())
         self.batch_tranfer_button.grid(row=0, column=1, sticky='W', pady=5, padx=10)
 
         self.batch_listbox = tk.Listbox(self.batch_frame, yscrollcommand=self.batch_yscrollbar.set,
