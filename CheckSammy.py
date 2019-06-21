@@ -89,8 +89,7 @@ class SammyGUI(tk.Tk):
         self.batch_delete_button.grid(row=0, column=0, sticky='W', pady=5, padx=10)
 
         self.batch_tranfer_button = tk.Button(
-            self.batch_frame, text='Safe transfer', command=lambda: threading.Thread(
-                target=self.open_safeTransfer, args=()).start())
+            self.batch_frame, text='Safe transfer', command=self.open_safeTransfer)
         self.batch_tranfer_button.grid(row=0, column=1, sticky='W', pady=5, padx=10)
 
         self.batch_listbox = tk.Listbox(self.batch_frame, yscrollcommand=self.batch_yscrollbar.set,
@@ -136,7 +135,8 @@ class SammyGUI(tk.Tk):
         self.transfer_dst_entry = tk.Entry(self.transfer_window,state=DISABLED,width=100)
         self.transfer_dst_entry.grid(row=1,column=0,sticky='n',padx=20)
 
-        self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=self.safe_transfer)
+        self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=lambda: threading.Thread(
+            target=self.safe_transfer, args=()).start())
         self.transfer_start_button.grid(row=2,column=0,padx=20,pady=20,sticky='n')
 
     def select_dst(self):
