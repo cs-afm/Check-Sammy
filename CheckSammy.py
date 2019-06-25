@@ -29,7 +29,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.7.3'
+        self.version = '0.7.4'
         self.title('Check Sammy %s' % self.version)
         self.iconbitmap(os.path.abspath('media/paw.ico'))
         self.resizable(False,False)
@@ -126,18 +126,20 @@ class SammyGUI(tk.Tk):
 
         self.transfer_window = tk.Toplevel()
         self.transfer_window.grab_set()
+        self.transfer_window.title('Safe Transfer')
+        self.transfer_window.iconbitmap(os.path.abspath('media/paw.ico'))
         self.transfer_window.geometry(f'650x160+{x+145}+{y+80}')
         self.transfer_window.resizable(False, False)
 
         self.transfer_dst_button = tk.Button(self.transfer_window, text='Select target folder:',command=self.select_dst)
-        self.transfer_dst_button.grid(row=0,column=0,padx=20,pady=20,sticky='n')
+        self.transfer_dst_button.place(x=250,y=20,width=150)
 
         self.transfer_dst_entry = tk.Entry(self.transfer_window,state=DISABLED,width=100)
-        self.transfer_dst_entry.grid(row=1,column=0,sticky='n',padx=20)
+        self.transfer_dst_entry.place(x=15,y=70,width=620)
 
         self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=lambda: threading.Thread(
             target=self.safe_transfer, args=()).start())
-        self.transfer_start_button.grid(row=2,column=0,padx=20,pady=20,sticky='n')
+        self.transfer_start_button.place(x=275,y=110,width=100)
 
     def select_dst(self):
         dst = filedialog.askdirectory()
