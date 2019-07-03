@@ -31,7 +31,10 @@ class SammyGUI(tk.Tk):
 
         self.version = '0.7.4'
         self.title('Check Sammy %s' % self.version)
-        self.iconbitmap(os.path.abspath('media/paw.ico'))
+
+        if os.name == 'nt':
+            self.iconbitmap(os.path.abspath('./media/paw.ico'))
+
         self.resizable(False,False)
 
         self.check_this = {'F': [], 'D': []}
@@ -127,7 +130,8 @@ class SammyGUI(tk.Tk):
         self.transfer_window = tk.Toplevel()
         self.transfer_window.grab_set()
         self.transfer_window.title('Safe Transfer')
-        self.transfer_window.iconbitmap(os.path.abspath('media/paw.ico'))
+        if os.name == 'nt':
+            self.transfer_window.iconbitmap(os.path.abspath('./media/paw.ico'))
         self.transfer_window.geometry(f'650x160+{x+145}+{y+80}')
         self.transfer_window.resizable(False, False)
 
@@ -222,7 +226,8 @@ class SammyGUI(tk.Tk):
         tot = ok + corr + no_cs + missing + new
 
         self.report_window = tk.Toplevel(self)
-        self.report_window.iconbitmap(os.path.abspath('media/paw.ico'))
+        if os.name == 'nt':
+            self.report_window.iconbitmap(os.path.abspath('./media/paw.ico'))
         self.report_window.title('Report')
 
         self.report_yscrollbar = tk.Scrollbar(
