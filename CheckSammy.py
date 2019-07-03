@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 '''
 Check Sammy is a GUI tool for checksumming stuff (using the md5 algorithm).
 It stores the hash values in separate json files (SomePath/InputFileName.md5).
