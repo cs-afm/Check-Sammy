@@ -443,86 +443,86 @@ class CheckSammy():
     def join_path(self,a,b):
         return a + '/' + b
 
-    def calc_md5(self, file):
+    def calculate_md5(self, file):
         # Calculates the md5 for the selected file.
         h = hashlib.md5()
 
-        with open(file, 'rb') as tohash:
-            for chunk in iter(lambda: tohash.read(4096), b''):
+        with open(file, 'rb') as file_data:
+            for chunk in iter(lambda: file_data.read(4096), b''):
                 h.update(chunk)
 
         return(h.hexdigest())
 
-    def check_md5(self, ff, switch=0):
+    def check_md5(self, path, switch=0):
         # Calculates a new checksum and confronts it with the one stored in the json.
         if switch == 0:
             try:
-                old_cs = json.load(open(ff + '.md5'))[os.path.basename(ff)]
-                new_cs = self.calc_md5(ff)
-                if old_cs == new_cs:
-                    puppy.checked['Ok'].append(os.path.basename(ff))
+                previous_checksum = json.load(open(path + '.md5'))[os.path.basename(path)]
+                new_checksum = self.calculate_md5(path)
+                if previous_checksum == new_checksum:
+                    puppy.checked['Ok'].append(os.path.basename(path))
                 else:
-                    puppy.checked['Corrupted'].append(os.path.basename(ff))
+                    puppy.checked['Corrupted'].append(os.path.basename(path))
             except FileNotFoundError:
-                puppy.checked['No md5'].append(os.path.basename(ff) + '.md5')
+                puppy.checked['No md5'].append(os.path.basename(path) + '.md5')
 
         elif switch == 1:
-            new_hash_dict = {}
-            new_hash_dict['PARENT FOLDER'] = os.path.basename(ff)
+            new_dict = {}
+            new_dict['PARENT FOLDER'] = os.path.basename(path)
             try:
-                old_hash_dict = json.load(open(ff + '.md5'))
+                previous_dict = json.load(open(path + '.md5'))
 
-                for root, folders, files in os.walk(ff):
+                for root, folders, files in os.walk(path):
                     for file in files:
                         to_hash = self.join_path(root, file)
-                        new_hash_dict[to_hash.replace(
-                            ff, '')[1:]] = self.calc_md5(to_hash)
+                        new_dict[to_hash.replace(
+                            path, '')[1:]] = self.calculate_md5(to_hash)
 
-                for obj in old_hash_dict:
-                    if not obj in new_hash_dict:
+                for obj in previous_dict:
+                    if not obj in new_dict:
                         puppy.checked['Missing file'].append(
-                            self.join_path(new_hash_dict['PARENT FOLDER'], obj))
+                            self.join_path(new_dict['PARENT FOLDER'], obj))
 
-                for obj in new_hash_dict:
-                    if not obj in old_hash_dict:
+                for obj in new_dict:
+                    if not obj in previous_dict:
                         puppy.checked['New file'].append(
-                            self.join_path(new_hash_dict['PARENT FOLDER'], obj))
+                            self.join_path(new_dict['PARENT FOLDER'], obj))
                     else:
-                        if new_hash_dict[obj] == old_hash_dict[obj]:
+                        if new_dict[obj] == previous_dict[obj]:
                             if obj != 'PARENT FOLDER':
                                 puppy.checked['Ok'].append(self.join_path(
-                                    new_hash_dict['PARENT FOLDER'], obj))
+                                    new_dict['PARENT FOLDER'], obj))
                         else:
                             puppy.checked['Corrupted'].append(
-                                self.join_path(new_hash_dict['PARENT FOLDER'], obj))
+                                self.join_path(new_dict['PARENT FOLDER'], obj))
 
             except FileNotFoundError:
-                puppy.checked['No md5'].append(new_hash_dict['PARENT FOLDER'] + '.md5')
+                puppy.checked['No md5'].append(new_dict['PARENT FOLDER'] + '.md5')
 
     def save_md5(self, file):
-        # Starts the calc_md5 method and stores the results in a dictionary.
+        # Starts the calculate_md5 method and stores the results in a dictionary.
         # Then dumps the dictionary into a json file.
-        hash_dict = {}
-        hash_dict[os.path.basename(file)] = self.calc_md5(file)
+        checksum_data = {}
+        checksum_data[os.path.basename(file)] = self.calculate_md5(file)
 
-        js = json.dumps(hash_dict, indent=4)
-        with open(file + '.md5', 'w+') as dot_md5:
-            dot_md5.write(js)
+        js = json.dumps(checksum_data, indent=4)
+        with open(file + '.md5', 'w+') as file_data:
+            file_data.write(js)
 
     def transfer_save_md5(self, file, dst):
-        # Starts the calc_md5 method and stores the results in a dictionary.
+        # Starts the calculate_md5 method and stores the results in a dictionary.
         # Then dumps the dictionary into a json file in the dst folder.
-        hash_dict = {}
-        hash_dict[os.path.basename(file)] = self.calc_md5(file)
+        checksum_data = {}
+        checksum_data[os.path.basename(file)] = self.calculate_md5(file)
 
-        js = json.dumps(hash_dict, indent=4)
+        js = json.dumps(checksum_data, indent=4)
         path = self.join_path(dst,file.split(os.sep)[-1])
-        with open(path + '.md5', 'w+') as dot_md5:
-            dot_md5.write(js)
+        with open(path + '.md5', 'w+') as file_data:
+            file_data.write(js)
 
     def get_hash_dict(self, dir, to_hash):
-        # Starts the calc_md5 method and stores the results in a dictionary.
-        puppy.hash_dict[to_hash.replace(dir, '')[1:].replace(os.sep,'/')] = self.calc_md5(to_hash)
+        # Starts the calculate_md5 method and stores the results in a dictionary.
+        puppy.hash_dict[to_hash.replace(dir, '')[1:].replace(os.sep,'/')] = self.calculate_md5(to_hash)
 
 
 puppy = SammyGUI()
