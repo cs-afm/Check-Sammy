@@ -455,21 +455,22 @@ class CheckSammy():
         return(h.hexdigest())
 
     def check_md5(self, path, switch=0):
-        # Calculates a new checksum and confronts it with the one stored in the json.
+        # Calculates a new checksum and compares it with the one stored in the json.
+        target_name = os.path.basename(path) # File or directory
+
         if switch == 0:
             try:
-                previous_checksum = json.load(open(path + '.md5'))[os.path.basename(path)]
+                previous_checksum = json.load(open(path + '.md5'))[target_name]
                 new_checksum = self.calculate_md5(path)
                 if previous_checksum == new_checksum:
-                    puppy.checked['Ok'].append(os.path.basename(path))
+                    puppy.checked['Ok'].append(target_name)
                 else:
-                    puppy.checked['Corrupted'].append(os.path.basename(path))
+                    puppy.checked['Corrupted'].append(target_name)
             except FileNotFoundError:
-                puppy.checked['No md5'].append(os.path.basename(path) + '.md5')
+                puppy.checked['No md5'].append(target_name + '.md5')
 
         elif switch == 1:
-            new_dict = {}
-            new_dict['PARENT FOLDER'] = os.path.basename(path)
+            new_dict = {'PARENT FOLDER': target_name}
             try:
                 previous_dict = json.load(open(path + '.md5'))
 
@@ -503,8 +504,7 @@ class CheckSammy():
     def save_md5(self, file):
         # Starts the calculate_md5 method and stores the results in a dictionary.
         # Then dumps the dictionary into a json file.
-        checksum_data = {}
-        checksum_data[os.path.basename(file)] = self.calculate_md5(file)
+        checksum_data = {os.path.basename(file): self.calculate_md5(file)}
 
         js = json.dumps(checksum_data, indent=4)
         with open(file + '.md5', 'w+') as file_data:
@@ -513,8 +513,7 @@ class CheckSammy():
     def transfer_save_md5(self, file, dst):
         # Starts the calculate_md5 method and stores the results in a dictionary.
         # Then dumps the dictionary into a json file in the dst folder.
-        checksum_data = {}
-        checksum_data[os.path.basename(file)] = self.calculate_md5(file)
+        checksum_data = {os.path.basename(file): self.calculate_md5(file)}
 
         js = json.dumps(checksum_data, indent=4)
         path = self.join_path(dst,file.split(os.sep)[-1])
