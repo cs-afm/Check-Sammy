@@ -114,14 +114,15 @@ class SammyGUI(tk.Tk):
             self.control_frame, text='Reset', command=self.reset)
         self.reset_button.grid(sticky='N', pady=10)
 
-        self.sel_operation = IntVar()
-        self.calculate = tk.Radiobutton(self.control_frame, text='Calculate md5', variable=self.sel_operation,
+        self.operation_type = IntVar()
+        self.calculate = tk.Radiobutton(self.control_frame, text='Calculate md5', variable=self.operation_type,
                                         value=1, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.calculate.grid(row=1, column=0, sticky='w')
-        self.difference = tk.Radiobutton(self.control_frame, text='Check difference', variable=self.sel_operation,
+        self.difference = tk.Radiobutton(self.control_frame, text='Check difference', variable=self.operation_type,
                                          value=2, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.difference.grid(row=2, column=0, sticky='w')
         self.difference.grid(row=3, column=0, sticky='w')
+        self.operation_type.set(1)
 
     def open_safe_transfer(self):
         x = self.winfo_x()
@@ -323,10 +324,10 @@ class SammyGUI(tk.Tk):
         if self.check_this == {'F': [], 'D': []}:
             self.status_label.configure(text='Batch empty')
         else:
-            if self.sel_operation.get() == 1:
+            if self.operation_type.get() == 1:
                 self.create_md5()
 
-            elif self.sel_operation.get() == 2:
+            elif self.operation_type.get() == 2:
                 self.compare_checksums()
 
             else:
