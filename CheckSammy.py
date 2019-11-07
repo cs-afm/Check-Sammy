@@ -20,6 +20,7 @@ import json
 import threading
 import datetime
 import shutil
+import subprocess
 
 
 class SammyGUI(tk.Tk):
@@ -29,7 +30,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.7.4'
+        self.version = '0.8.0'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -116,13 +117,15 @@ class SammyGUI(tk.Tk):
 
         self.operation_type = IntVar()
         self.calculate = tk.Radiobutton(self.control_frame, text='Calculate md5', variable=self.operation_type,
-                                        value=1, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
+                                        value=0, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.calculate.grid(row=1, column=0, sticky='w')
         self.difference = tk.Radiobutton(self.control_frame, text='Check difference', variable=self.operation_type,
-                                         value=2, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
+                                         value=1, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.difference.grid(row=2, column=0, sticky='w')
-        self.difference.grid(row=3, column=0, sticky='w')
-        self.operation_type.set(1)
+        self.streamhash = tk.Radiobutton(self.control_frame, text='Streamhash', variable=self.operation_type,
+                                         value=2, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
+        self.streamhash.grid(row=3, column=0, sticky='w')
+        self.operation_type.set(3)
 
     def open_safe_transfer(self):
         x = self.winfo_x()
@@ -324,11 +327,14 @@ class SammyGUI(tk.Tk):
         if self.check_this == {'F': [], 'D': []}:
             self.status_label.configure(text='Batch empty')
         else:
-            if self.operation_type.get() == 1:
+            if self.operation_type.get() == 0:
                 self.create_md5()
 
-            elif self.operation_type.get() == 2:
+            elif self.operation_type.get() == 1:
                 self.compare_checksums()
+
+            elif self.operation_type.get() == 2:
+                self.create_streamhash()
 
             else:
                 self.status_label.configure(text="Sammy's confused...")
@@ -336,7 +342,6 @@ class SammyGUI(tk.Tk):
     def create_md5(self,transfer=False,dst=None):
         self.status_label.configure(text='Working...')
 
-        before = datetime.datetime.now()
         workers = mp.Pool(8)
 
         if transfer == False:
@@ -370,8 +375,8 @@ class SammyGUI(tk.Tk):
         workers.close()
         workers.join()
 
-        print('Finished after: ' + str(datetime.datetime.now() - before))
-        self.status_label.configure(text='Done')
+        if transfer == False:
+            self.status_label.configure(text='Done')
 
     def compare_checksums(self, transfer=False, check_transferred=None):
         self.status_label.configure(text='Working...')
@@ -393,6 +398,29 @@ class SammyGUI(tk.Tk):
         self.report(transfer)
         self.status_label.configure(text='Done')
 
+    def create_streamhash(self):
+        self.status_label.configure(text='Working...')
+
+        for file in self.check_this['F']:
+            streamhash_dict = {}
+            streamhash_string = subprocess.check_output(['ffmpeg', '-i', file, '-map', '0', '-f', 'streamhash', '-hash', 'md5', '-']).decode("utf-8")
+
+            streamhash_dict['Filename: '] = os.path.basename(file)
+
+            for stream in streamhash_string.split('\n')[:-1]:
+                stream_number = stream.split('=')[0]
+                md5 = stream.split('=')[1]
+                streamhash_dict[stream_number] = md5
+
+            js = json.dumps(streamhash_dict, indent=4)
+            with open(file + '.streamhash', 'w+') as dot_streamhash:
+                dot_streamhash.write(js)
+
+            print('----------')
+
+        print('\n\n')
+        self.status_label.configure(text='Done')
+
     def safe_transfer(self):
         if self.transfer_dst_entry.get() != '':
             dst = self.transfer_dst_entry.get()
@@ -411,7 +439,9 @@ class SammyGUI(tk.Tk):
                     for file in self.check_this['F']:
                         new_copy = self.checksummer.join_path(dst,file.split(os.sep)[-1])
                         if not os.path.isfile(self.checksummer.join_path(dst,file.split(os.sep)[-1])):
-                            shutil.copy(file,dst)
+                            before = datetime.datetime.now()
+                            shutil.copy2(file,dst)
+                            print(datetime.datetime.now() - before)
                         else:
                             raise FileExistsError
                         check_transferred['F'].append(new_copy)
