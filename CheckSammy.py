@@ -21,6 +21,7 @@ import threading
 import datetime
 import shutil
 import subprocess
+import xxhash
 
 
 class SammyGUI(tk.Tk):
@@ -30,7 +31,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.8.0'
+        self.version = '0.8.1'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -145,9 +146,17 @@ class SammyGUI(tk.Tk):
         self.transfer_dst_entry = tk.Entry(self.transfer_window,state=DISABLED,width=100)
         self.transfer_dst_entry.place(x=15,y=70,width=620)
 
+        self.hash_type = IntVar()
+        self.md5_radiobutton = tk.Radiobutton(self.transfer_window, text='md5', variable=self.hash_type,
+                                        value=0, tristatevalue=4)
+        self.md5_radiobutton.place(x=15,y=100)
+        self.xxHash_radiobutton = tk.Radiobutton(self.transfer_window, text='xxHash', variable=self.hash_type,
+                                         value=1, tristatevalue=4)
+        self.xxHash_radiobutton.place(x=15,y=120)
+
         self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=lambda: threading.Thread(
             target=self.safe_transfer, args=()).start())
-        self.transfer_start_button.place(x=275,y=110,width=100)
+        self.transfer_start_button.place(x=275,y=110)
 
     def select_target_directory(self):
         dst = filedialog.askdirectory()
@@ -371,6 +380,39 @@ class SammyGUI(tk.Tk):
                 path = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
                 with open(path + '.md5', 'w+') as dot_md5:
                     dot_md5.write(js)
+###################
+    def create_xxHash(self,transfer=False,dst=None):
+        self.status_label.configure(text='Working...')
+
+        workers = mp.Pool(8)
+
+        if transfer == False:
+            workers.map(self.checksummer.save_xxHash, self.check_this['F']) # DONE save_xxHash
+        else:
+            args = []
+            for file in self.check_this['F']:
+                args.append((file,dst))
+            workers.starmap(self.checksummer.transfer_save_xxHash, args) # DONE transfer_save_xxHash
+
+        for dir in self.check_this['D']:
+            self.hash_dict = {}
+            self.hash_dict['PARENT FOLDER'] = os.path.basename(dir)
+            for root, folders, files in os.walk(dir):
+                a = []
+                for file in files:
+                    to_hash = self.checksummer.join_path(root, file)
+                    a.append((dir, to_hash))
+
+                workers.starmap(self.checksummer.get_xxHash_dict, a) # DONE get_xxHash_dict
+
+            js = json.dumps(self.hash_dict, indent=4)
+            if transfer == False:
+                with open(dir + '.md5', 'w+') as dot_md5:
+                    dot_md5.write(js)
+            else:
+                path = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
+                with open(path + '.md5', 'w+') as dot_md5:
+                    dot_md5.write(js)
 
         workers.close()
         workers.join()
@@ -432,7 +474,10 @@ class SammyGUI(tk.Tk):
                 else:
                     check_transferred = {'F': [], 'D': []}
                     print('Calculating checksums...')
-                    self.create_md5(True,dst)
+                    if self.hash_type.get() == 0:
+                        self.create_md5(True,dst)
+                    elif self.hash_type.get() == 1:
+                        self.create_xxHash(True,dst)
                     print('Done\n')
                     print('Transferring files...')
 
@@ -477,6 +522,15 @@ class CheckSammy():
     def calculate_md5(self, file):
         # Calculates the md5 for the selected file.
         h = hashlib.md5()
+
+        with open(file, 'rb') as file_data:
+            for chunk in iter(lambda: file_data.read(4096), b''):
+                h.update(chunk)
+
+        return(h.hexdigest())
+
+    def calculate_xxHash(self, file):
+        h = xxhash.xxh64()
 
         with open(file, 'rb') as file_data:
             for chunk in iter(lambda: file_data.read(4096), b''):
@@ -540,6 +594,13 @@ class CheckSammy():
         with open(file + '.md5', 'w+') as file_data:
             file_data.write(js)
 
+    def save_xxHash(self, file):
+        checksum_data = {os.path.basename(file): self.calculate_xxHash(file)}
+
+        js = json.dumps(checksum_data, indent=4)
+        with open(file + '.xxh', 'w+') as file_data:
+            file_data.write(js)
+
     def transfer_save_md5(self, file, dst):
         # Starts the calculate_md5 method and stores the results in a dictionary.
         # Then dumps the dictionary into a json file in the dst folder.
@@ -550,9 +611,21 @@ class CheckSammy():
         with open(path + '.md5', 'w+') as file_data:
             file_data.write(js)
 
+    def transfer_save_xxHash(self, file, dst):
+        checksum_data = {os.path.basename(file): self.calculate_xxHash(file)}
+
+        js = json.dumps(checksum_data, indent=4)
+        path = self.join_path(dst,file.split(os.sep)[-1])
+        with open(path + '.xxh', 'w+') as file_data:
+            file_data.write(js)
+
     def get_hash_dict(self, dir, to_hash):
         # Starts the calculate_md5 method and stores the results in a dictionary.
         puppy.hash_dict[to_hash.replace(dir, '')[1:].replace(os.sep,'/')] = self.calculate_md5(to_hash)
+
+    def get_xxHash_dict(self, dir, to_hash):
+        puppy.hash_dict[to_hash.replace(dir, '')[1:].replace(os.sep,'/')] = self.calculate_xxHash(to_hash)
+
 
 
 puppy = SammyGUI()
