@@ -380,6 +380,12 @@ class SammyGUI(tk.Tk):
                 path = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
                 with open(path + '.md5', 'w+') as dot_md5:
                     dot_md5.write(js)
+
+        workers.close()
+        workers.join()
+
+        if transfer == False:
+            self.status_label.configure(text='Done')
 ###################
     def create_xxHash(self,transfer=False,dst=None):
         self.status_label.configure(text='Working...')
@@ -519,15 +525,37 @@ class CheckSammy():
     def join_path(self,a,b):
         return a + '/' + b
 
+    # def progress_bar(self, file, percent):
+    #     arrow = '-' * (int(percent/10) - 1) + '>'
+    #     spaces = ' ' * (10 - len(arrow))
+    #
+    #     if percent < 100:
+    #         sys.stdout.write(f'\rHashing: {file} - Percent: [{arrow+spaces}] {percent}%')
+    #         sys.stdout.flush()
+    #     else:
+    #         sys.stdout.write(f'\rHashing: {file} - Percent: [{arrow+spaces}] Done')
+    #         sys.stdout.flush()
+
     def calculate_md5(self, file):
         # Calculates the md5 for the selected file.
         h = hashlib.md5()
 
         with open(file, 'rb') as file_data:
+            file_size = size_to_hash = os.path.getsize(file)
+            #percent = 0
             for chunk in iter(lambda: file_data.read(4096), b''):
                 h.update(chunk)
+                # size_to_hash -= 4096
+                # if size_to_hash > 0:
+                #     new_percent = 100 - (round(size_to_hash/file_size*10) * 10)
+                # else:
+                #     new_percent = 100
+                # if new_percent > percent:
+                #     percent = new_percent
+                #     self.progress_bar(os.path.basename(file), percent)
 
-        return(h.hexdigest())
+            #print('')
+            return(h.hexdigest())
 
     def calculate_xxHash(self, file):
         h = xxhash.xxh64()
