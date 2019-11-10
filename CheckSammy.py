@@ -31,7 +31,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.8.1'
+        self.version = '0.8.2'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -79,15 +79,11 @@ class SammyGUI(tk.Tk):
 
         self.batch_yscrollbar = tk.Scrollbar(
             self.batch_frame, orient='vertical')
-        self.batch_yscrollbar.grid(row=1, column=3, rowspan=2, sticky='NS')
+        self.batch_yscrollbar.grid(row=1, column=4, rowspan=2, sticky='NS')
 
         self.batch_xscrollbar = tk.Scrollbar(
             self.batch_frame, orient='horizontal')
-        self.batch_xscrollbar.grid(row=2, column=0, columnspan=3, sticky='WE')
-
-        self.batch_label = tk.Label(
-            self.batch_frame, text='Queue (0)', borderwidth=4, relief='groove', width=100)
-        self.batch_label.grid(row=0, column=2, sticky='W', pady=5)
+        self.batch_xscrollbar.grid(row=2, column=0, columnspan=4, sticky='WE')
 
         self.batch_remove_button = tk.Button(
             self.batch_frame, text='Remove', command=self.remove_item)
@@ -97,6 +93,14 @@ class SammyGUI(tk.Tk):
             self.batch_frame, text='Safe transfer', command=self.open_safe_transfer)
         self.batch_tranfer_button.grid(row=0, column=1, sticky='W', pady=5, padx=10)
 
+        self.batch_label = tk.Label(
+            self.batch_frame, text='Queue (0)', borderwidth=4, relief='groove', width=100)
+        self.batch_label.grid(row=0, column=2, sticky='W', pady=5)
+
+        self.ffmpeg_button = tk.Button(
+            self.batch_frame, text='FFmpeg options', command=self.open_ffmpeg_options)
+        self.ffmpeg_button.grid(row=0, column=3, sticky='W', pady=5, padx=10)
+
         self.batch_listbox = tk.Listbox(self.batch_frame, yscrollcommand=self.batch_yscrollbar.set,
                                         xscrollcommand=self.batch_xscrollbar.set, width=180, height=23)
         self.batch_listbox.configure(activestyle='none', highlightthickness=0)
@@ -104,7 +108,7 @@ class SammyGUI(tk.Tk):
         self.batch_yscrollbar.configure(command=self.batch_listbox.yview)
         self.batch_xscrollbar.configure(command=self.batch_listbox.xview)
 
-        self.batch_listbox.grid(row=1, column=0, columnspan=3)
+        self.batch_listbox.grid(row=1, column=0, columnspan=4)
 
         self.batch_frame.bind(
             '<Leave>', lambda x: self.batch_listbox.selection_clear(0, END))
@@ -123,7 +127,7 @@ class SammyGUI(tk.Tk):
         self.difference = tk.Radiobutton(self.control_frame, text='Check difference', variable=self.operation_type,
                                          value=1, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.difference.grid(row=2, column=0, sticky='w')
-        self.streamhash = tk.Radiobutton(self.control_frame, text='Streamhash', variable=self.operation_type,
+        self.streamhash = tk.Radiobutton(self.control_frame, text='FFmpeg', variable=self.operation_type,
                                          value=2, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
         self.streamhash.grid(row=3, column=0, sticky='w')
         self.operation_type.set(3)
@@ -133,11 +137,12 @@ class SammyGUI(tk.Tk):
         y = self.winfo_y()
 
         self.transfer_window = tk.Toplevel()
+        self.transfer_window.geometry(f'650x160+{x+145}+{y+80}')
         self.transfer_window.grab_set()
         self.transfer_window.title('Safe Transfer')
         if os.name == 'nt':
             self.transfer_window.iconbitmap(os.path.abspath('./media/paw.ico'))
-        self.transfer_window.geometry(f'650x160+{x+145}+{y+80}')
+
         self.transfer_window.resizable(False, False)
 
         self.transfer_dst_button = tk.Button(self.transfer_window, text='Select target folder:',command=self.select_target_directory)
@@ -157,6 +162,55 @@ class SammyGUI(tk.Tk):
         self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=lambda: threading.Thread(
             target=self.safe_transfer, args=()).start())
         self.transfer_start_button.place(x=275,y=110)
+
+    def open_ffmpeg_options(self):
+        x = self.winfo_x()
+        y = self.winfo_y()
+
+        self.ffmpeg_window = tk.Toplevel()
+        self.ffmpeg_window.geometry(f'450x160+{x+145}+{y+80}')
+        self.ffmpeg_window.grab_set()
+        self.ffmpeg_window.title('FFmpeg Options')
+        if os.name == 'nt':
+            self.ffmpeg_window.iconbitmap(os.path.abspath('./media/paw.ico'))
+
+        self.ffmpeg_window.resizable(False, False)
+
+        self.hash_label = tk.Label(
+            self.ffmpeg_window, text='Hash algorithm', borderwidth=4, relief='groove', width=15)
+        self.hash_label.grid(row=0, column=0, sticky='W', pady=5)
+
+        self.hash_alogorithm = IntVar()
+        self.md5_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='md5', variable=self.hash_alogorithm,
+                                        value=0, tristatevalue=4)
+        self.md5_radiobutton.grid(row=1, column=0, sticky='W', pady=5)
+        self.crc32_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='crc32', variable=self.hash_alogorithm,
+                                         value=1, tristatevalue=4)
+        self.crc32_radiobutton.grid(row=2, column=0, sticky='W', pady=5)
+
+        self.format_label = tk.Label(
+            self.ffmpeg_window, text='Format', borderwidth=4, relief='groove', width=15)
+        self.format_label.grid(row=0, column=1, sticky='W', pady=5)
+
+        self.ffmpeg_format = IntVar()
+        self.framemd5_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='framemd5', variable=self.ffmpeg_format,
+                                        value=1, tristatevalue=4)
+        self.framemd5_radiobutton.grid(row=2, column=1, sticky='W', pady=5)
+        self.streamhash_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='Streamhash', variable=self.ffmpeg_format,
+                                         value=0, tristatevalue=4)
+        self.streamhash_radiobutton.grid(row=1, column=1, sticky='W', pady=5)
+
+        self.codec_label = tk.Label(
+            self.ffmpeg_window, text='Codec', borderwidth=4, relief='groove', width=15)
+        self.codec_label.grid(row=0, column=2, sticky='W', pady=5)
+
+        self.ffmpeg_codec = IntVar()
+        self.raw_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='Raw video', variable=self.ffmpeg_codec,
+                                        value=0, tristatevalue=4)
+        self.raw_radiobutton.grid(row=1, column=2, sticky='W', pady=5)
+        self.copy_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='Copy (-c copy)', variable=self.ffmpeg_codec,
+                                         value=1, tristatevalue=4)
+        self.copy_radiobutton.grid(row=2, column=2, sticky='W', pady=5)
 
     def select_target_directory(self):
         dst = filedialog.askdirectory()
@@ -265,10 +319,10 @@ class SammyGUI(tk.Tk):
 
         if no_checksum_count > 0:
             self.report_text.insert(
-                END, "Sammy couldn't find a valid .md5 for %s files/folders.\n------------\n\n\n" % str(no_checksum_count))
+                END, "Sammy couldn't find a valid checksum for %s files/folders.\n------------\n\n\n" % str(no_checksum_count))
         else:
             self.report_text.insert(
-                END, 'All the .md5 were found.\n------------\n\n\n')
+                END, 'All the checksums were found.\n------------\n\n\n')
 
         if corrupted_count > 0:
             self.report_text.insert(
@@ -393,12 +447,12 @@ class SammyGUI(tk.Tk):
         workers = mp.Pool(8)
 
         if transfer == False:
-            workers.map(self.checksummer.save_xxHash, self.check_this['F']) # DONE save_xxHash
+            workers.map(self.checksummer.save_xxHash, self.check_this['F'])
         else:
             args = []
             for file in self.check_this['F']:
                 args.append((file,dst))
-            workers.starmap(self.checksummer.transfer_save_xxHash, args) # DONE transfer_save_xxHash
+            workers.starmap(self.checksummer.transfer_save_xxHash, args)
 
         for dir in self.check_this['D']:
             self.hash_dict = {}
@@ -409,7 +463,7 @@ class SammyGUI(tk.Tk):
                     to_hash = self.checksummer.join_path(root, file)
                     a.append((dir, to_hash))
 
-                workers.starmap(self.checksummer.get_xxHash_dict, a) # DONE get_xxHash_dict
+                workers.starmap(self.checksummer.get_xxHash_dict, a)
 
             js = json.dumps(self.hash_dict, indent=4)
             if transfer == False:
@@ -426,13 +480,16 @@ class SammyGUI(tk.Tk):
         if transfer == False:
             self.status_label.configure(text='Done')
 
-    def compare_checksums(self, transfer=False, check_transferred=None):
+    def compare_checksums(self, transfer=False, check_transferred=None, hash_type='md5'):
         self.status_label.configure(text='Working...')
         to_check = self.check_this if transfer == False else check_transferred
 
         workers = mp.Pool(8)
 
-        workers.map(self.checksummer.check_md5, to_check['F'])
+        if hash_type == 'md5':
+            workers.map(self.checksummer.check_md5, to_check['F'])
+        elif hash_type == 'xxHash':
+            workers.map(self.checksummer.check_xxh, to_check['F'])
 
         a = []
         for dir in to_check['D']:
@@ -490,9 +547,7 @@ class SammyGUI(tk.Tk):
                     for file in self.check_this['F']:
                         new_copy = self.checksummer.join_path(dst,file.split(os.sep)[-1])
                         if not os.path.isfile(self.checksummer.join_path(dst,file.split(os.sep)[-1])):
-                            before = datetime.datetime.now()
                             shutil.copy2(file,dst)
-                            print(datetime.datetime.now() - before)
                         else:
                             raise FileExistsError
                         check_transferred['F'].append(new_copy)
@@ -506,7 +561,10 @@ class SammyGUI(tk.Tk):
                     print('Done\n')
                     print('Comparing difference...')
 
-                    self.compare_checksums(True,check_transferred)
+                    if self.hash_type.get() == 0:
+                        self.compare_checksums(True,check_transferred,hash_type='md5')
+                    else:
+                        self.compare_checksums(True,check_transferred,hash_type='xxHash')
                     print('Done')
                     print('----------')
 
@@ -612,6 +670,53 @@ class CheckSammy():
 
             except FileNotFoundError:
                 puppy.checked['No md5'].append(new_dict['PARENT FOLDER'] + '.md5')
+
+    def check_xxh(self, path, switch=0):
+        # Calculates a new checksum and compares it with the one stored in the json.
+        target_name = os.path.basename(path) # File or directory
+
+        if switch == 0:
+            try:
+                previous_checksum = json.load(open(path + '.xxh'))[target_name]
+                new_checksum = self.calculate_xxHash(path)
+                if previous_checksum == new_checksum:
+                    puppy.checked['Ok'].append(target_name)
+                else:
+                    puppy.checked['Corrupted'].append(target_name)
+            except FileNotFoundError:
+                puppy.checked['No md5'].append(target_name + '.xxh')
+
+        elif switch == 1:
+            new_dict = {'PARENT FOLDER': target_name}
+            try:
+                previous_dict = json.load(open(path + '.xxh'))
+
+                for root, folders, files in os.walk(path):
+                    for file in files:
+                        to_hash = self.join_path(root, file)
+                        new_dict[to_hash.replace(
+                            path, '')[1:]] = self.calculate_xxHash(to_hash)
+
+                for obj in previous_dict:
+                    if not obj in new_dict:
+                        puppy.checked['Missing file'].append(
+                            self.join_path(new_dict['PARENT FOLDER'], obj))
+
+                for obj in new_dict:
+                    if not obj in previous_dict:
+                        puppy.checked['New file'].append(
+                            self.join_path(new_dict['PARENT FOLDER'], obj))
+                    else:
+                        if new_dict[obj] == previous_dict[obj]:
+                            if obj != 'PARENT FOLDER':
+                                puppy.checked['Ok'].append(self.join_path(
+                                    new_dict['PARENT FOLDER'], obj))
+                        else:
+                            puppy.checked['Corrupted'].append(
+                                self.join_path(new_dict['PARENT FOLDER'], obj))
+
+            except FileNotFoundError:
+                puppy.checked['No md5'].append(new_dict['PARENT FOLDER'] + '.xxh')
 
     def save_md5(self, file):
         # Starts the calculate_md5 method and stores the results in a dictionary.
