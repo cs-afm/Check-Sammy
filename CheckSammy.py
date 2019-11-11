@@ -467,11 +467,11 @@ class SammyGUI(tk.Tk):
 
             js = json.dumps(self.hash_dict, indent=4)
             if transfer == False:
-                with open(dir + '.md5', 'w+') as dot_md5:
+                with open(dir + '.xxh', 'w+') as dot_md5:
                     dot_md5.write(js)
             else:
                 path = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
-                with open(path + '.md5', 'w+') as dot_md5:
+                with open(path + '.xxh', 'w+') as dot_md5:
                     dot_md5.write(js)
 
         workers.close()
