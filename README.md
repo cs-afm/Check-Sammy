@@ -5,6 +5,8 @@ Python GUI for calculating and monitoring md5 checksums
 ## Dependencies
 
 * [Python 3.6](https://www.python.org/downloads/)
+  FFmpeg
+  xxHash
 
 ## Local setup
 
