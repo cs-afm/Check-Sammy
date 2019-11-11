@@ -568,7 +568,8 @@ class SammyGUI(tk.Tk):
                         self.compare_checksums(True,check_transferred,hash_type='md5')
                     else:
                         self.compare_checksums(True,check_transferred,hash_type='xxHash')
-                    print(f'Done after {print(datetime.datetime.now()-before)}')
+                        
+                    print(f'Done after {datetime.datetime.now()-before}')
                     print('----------')
 
             except FileExistsError:
