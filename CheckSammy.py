@@ -495,8 +495,10 @@ class SammyGUI(tk.Tk):
         for dir in to_check['D']:
             a.append((dir, 1))
 
-        workers.starmap(self.checksummer.check_md5, a)
-
+        if hash_type == 'md5':
+            workers.starmap(self.checksummer.check_md5, a)
+        elif hash_type == 'xxHash':
+            workers.starmap(self.checksummer.check_xxh, a)
         workers.close()
         workers.join()
 
