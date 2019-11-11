@@ -539,28 +539,49 @@ class SammyGUI(tk.Tk):
                 else:
                     before = datetime.datetime.now()
                     check_transferred = {'F': [], 'D': []}
+                    print('Safe transfer started')
                     print('Calculating checksums...')
+
                     if self.hash_type.get() == 0:
                         self.create_md5(True,dst)
                     elif self.hash_type.get() == 1:
                         self.create_xxHash(True,dst)
+
                     print('Done\n')
                     print('Transferring files...')
 
                     for file in self.check_this['F']:
                         new_copy = self.checksummer.join_path(dst,file.split(os.sep)[-1])
                         if not os.path.isfile(self.checksummer.join_path(dst,file.split(os.sep)[-1])):
-                            shutil.copy2(file,dst)
+
+                            try:
+                                if os.name == 'nt':
+                                    subprocess.call(['robocopy',os.path.dirname(file),dst,os.path.basename(file)])
+                                else:
+                                    subprocess.call(['cp', file, dst])
+                            except:
+                                print('Transferring files with shutil')
+                                shutil.copy2(file,dst)
+
                         else:
                             raise FileExistsError
                         check_transferred['F'].append(new_copy)
-                    print('Done\n')
-                    print('Transferring folders...')
+
 
                     for dir in self.check_this['D']:
                         new_copy = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
-                        shutil.copytree(dir,new_copy)
+
+                        try:
+                            if os.name == 'nt':
+                                subprocess.call(['robocopy',dir,new_copy])
+                            else:
+                                subprocess.call(['cp', '-R', dir, new_copy])
+                        except:
+                            print('Transferring folders with shutil')
+                            shutil.copytree(dir,new_copy)
+
                         check_transferred['D'].append(new_copy)
+
                     print('Done\n')
                     print('Comparing difference...')
 
@@ -568,6 +589,7 @@ class SammyGUI(tk.Tk):
                         self.compare_checksums(True,check_transferred,hash_type='md5')
                     else:
                         self.compare_checksums(True,check_transferred,hash_type='xxHash')
+
                     print(f'Done after {print(datetime.datetime.now()-before)}')
                     print('----------')
 
