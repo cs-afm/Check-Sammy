@@ -31,7 +31,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.8.2'
+        self.version = '0.8.3'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -168,7 +168,7 @@ class SammyGUI(tk.Tk):
         y = self.winfo_y()
 
         self.ffmpeg_window = tk.Toplevel()
-        self.ffmpeg_window.geometry(f'450x160+{x+145}+{y+80}')
+        self.ffmpeg_window.geometry(f'400x160+{x+145}+{y+80}')
         self.ffmpeg_window.grab_set()
         self.ffmpeg_window.title('FFmpeg Options')
         if os.name == 'nt':
@@ -185,7 +185,7 @@ class SammyGUI(tk.Tk):
                                         value=0, tristatevalue=4)
         self.md5_radiobutton.grid(row=1, column=0, sticky='W', pady=5)
         self.crc32_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='crc32', variable=self.hash_alogorithm,
-                                         value=1, tristatevalue=4)
+                                         value=1, tristatevalue=4,state=DISABLED)
         self.crc32_radiobutton.grid(row=2, column=0, sticky='W', pady=5)
 
         self.format_label = tk.Label(
@@ -194,7 +194,7 @@ class SammyGUI(tk.Tk):
 
         self.ffmpeg_format = IntVar()
         self.framemd5_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='framemd5', variable=self.ffmpeg_format,
-                                        value=1, tristatevalue=4)
+                                        value=1, tristatevalue=4,state=DISABLED)
         self.framemd5_radiobutton.grid(row=2, column=1, sticky='W', pady=5)
         self.streamhash_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='Streamhash', variable=self.ffmpeg_format,
                                          value=0, tristatevalue=4)
@@ -209,7 +209,7 @@ class SammyGUI(tk.Tk):
                                         value=0, tristatevalue=4)
         self.raw_radiobutton.grid(row=1, column=2, sticky='W', pady=5)
         self.copy_radiobutton = tk.Radiobutton(self.ffmpeg_window, text='Copy (-c copy)', variable=self.ffmpeg_codec,
-                                         value=1, tristatevalue=4)
+                                         value=1, tristatevalue=4,state=DISABLED)
         self.copy_radiobutton.grid(row=2, column=2, sticky='W', pady=5)
 
     def select_target_directory(self):
@@ -506,26 +506,34 @@ class SammyGUI(tk.Tk):
         self.status_label.configure(text='Done')
 
     def create_streamhash(self):
+        # This will ignore folders and only try to streamhash av-files
         self.status_label.configure(text='Working...')
 
         for file in self.check_this['F']:
-            streamhash_dict = {}
-            streamhash_string = subprocess.check_output(['ffmpeg', '-i', file, '-map', '0', '-f', 'streamhash', '-hash', 'md5', '-']).decode("utf-8")
+            try:
+                streamhash_dict = {}
+                streamhash_string = subprocess.check_output(['ffmpeg', '-i', file, '-map', '0', '-f', 'streamhash', '-hash', 'md5', '-']).decode("utf-8")
 
-            streamhash_dict['Filename: '] = os.path.basename(file)
+                streamhash_dict['Filename: '] = os.path.basename(file)
 
-            for stream in streamhash_string.split('\n')[:-1]:
-                stream_number = stream.split('=')[0]
-                md5 = stream.split('=')[1]
-                streamhash_dict[stream_number] = md5
+                for stream in streamhash_string.split('\n')[:-1]:
+                    stream_number = stream.split('=')[0]
+                    md5 = stream.split('=')[1]
+                    streamhash_dict[stream_number] = md5
 
-            js = json.dumps(streamhash_dict, indent=4)
-            with open(file + '.streamhash', 'w+') as dot_streamhash:
-                dot_streamhash.write(js)
+                js = json.dumps(streamhash_dict, indent=4)
+                with open(file + '.streamhash', 'w+') as dot_streamhash:
+                    dot_streamhash.write(js)
 
-            print('----------')
+                print('----------')
+            except subprocess.CalledProcessError:
+                print(f'\n\n----------\nFFmpeg didn\'t understand the input. "{file}" will be skipped.\n----------\n\n')
 
-        print('\n\n')
+        if len(self.check_this['F']) > 0:
+            print('\n\n')
+        else:
+            print('The FFmpeg option only works with files. Folders in queue have been skipped.\n----------')
+
         self.status_label.configure(text='Done')
 
     def safe_transfer(self):
@@ -568,7 +576,7 @@ class SammyGUI(tk.Tk):
                         self.compare_checksums(True,check_transferred,hash_type='md5')
                     else:
                         self.compare_checksums(True,check_transferred,hash_type='xxHash')
-                        
+
                     print(f'Done after {datetime.datetime.now()-before}')
                     print('----------')
 
