@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 '''
-Check Sammy is a GUI tool for checksumming stuff (using the md5 algorithm).
-It stores the hash values in separate json files (SomePath/InputFileName.md5).
+Check Sammy is a GUI tool for checksumming stuff (using the md5 or xxHash algorithm).
+It stores the hash values in separate json files (e.g. SomePath/InputFileName.md5).
 The same files can be used for running integrity checks. In this case Sammy will look
-for the json in whatever new path the file has been moved to (SomeOtherPath/InputFileName.md5).
+for the json in whatever new path the file has been moved to (e.g. SomeOtherPath/InputFileName.md5).
 Sammy was born at the Austrian Film Museum in 2019.
 
 "Hoog Sammy, kijk omhoog Sammy
@@ -31,7 +31,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.8.3'
+        self.version = '0.9.0'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -558,7 +558,11 @@ class SammyGUI(tk.Tk):
                     for file in self.check_this['F']:
                         new_copy = self.checksummer.join_path(dst,file.split(os.sep)[-1])
                         if not os.path.isfile(self.checksummer.join_path(dst,file.split(os.sep)[-1])):
-                            shutil.copy2(file,dst)
+                            #shutil.copy2(file,dst)
+                            if os.name == 'nt':
+                                subprocess.call(['robocopy',os.path.abspath(os.path.dirname(file)),os.path.abspath(dst),os.path.basename(file)])
+                            else:
+                                subprocess.call(['cp',file,dst])
                         else:
                             raise FileExistsError
                         check_transferred['F'].append(new_copy)
@@ -567,7 +571,11 @@ class SammyGUI(tk.Tk):
 
                     for dir in self.check_this['D']:
                         new_copy = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
-                        shutil.copytree(dir,new_copy)
+                        # shutil.copytree(dir,new_copy)
+                        if os.name == 'nt':
+                            subprocess.call(['robocopy',os.path.abspath(dir),os.path.join(os.path.abspath(dst),os.path.basename(dir)),'/E'])
+                        else:
+                            subprocess.call(['cp','-R',dir,dst])
                         check_transferred['D'].append(new_copy)
                     print('Done\n')
                     print('Comparing difference...')
