@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 '''
-Check Sammy is a GUI tool for checksumming stuff (using the md5 or xxHash algorithm).
-It stores the hash values in separate json files (SomePath/InputFileName.md5 or .xxh).
+Check Sammy is a GUI tool for checksumming stuff (using the md5 algorithm).
+It stores the hash values in separate json files (SomePath/InputFileName.md5).
 The same files can be used for running integrity checks. In this case Sammy will look
-for the json in whatever new path the file has been moved to (e.g. SomeOtherPath/InputFileName.md5).
+for the json in whatever new path the file has been moved to (SomeOtherPath/InputFileName.md5).
 Sammy was born at the Austrian Film Museum in 2019.
 
 "Hoog Sammy, kijk omhoog Sammy
@@ -31,7 +31,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = ‘0.9.0’
+        self.version = '0.8.3'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
