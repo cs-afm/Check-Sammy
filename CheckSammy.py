@@ -31,7 +31,7 @@ class SammyGUI(tk.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.9.0'
+        self.version = '0.9.1'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -66,13 +66,19 @@ class SammyGUI(tk.Tk):
         self.status_label = tk.Label(self.button_frame, text='Ready')
         self.status_label.grid(row=6, sticky='N', pady=20)
 
-        self.sammy = tk.PhotoImage(file='media/dog.png')
+        try:
+            self.sammy = tk.PhotoImage(file='media/dog.png')
+        except:
+            pass
 
         self.sammy_frame = tk.Frame(self.button_frame)
         self.sammy_frame.grid(row=4, column=0)
 
-        self.sammy_label = tk.Label(self.sammy_frame, image=self.sammy)
-        self.sammy_label.grid(pady=10)
+        try:
+            self.sammy_label = tk.Label(self.sammy_frame, image=self.sammy)
+            self.sammy_label.grid(pady=10)
+        except:
+            pass
 
         self.batch_frame = tk.Frame(self, width=1700)
         self.batch_frame.grid(row=0, column=1, rowspan=2)
