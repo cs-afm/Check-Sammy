@@ -22,16 +22,17 @@ import datetime
 import shutil
 import subprocess
 import xxhash
+from TkinterDnD2 import *
 
 
-class SammyGUI(tk.Tk):
+class SammyGUI(TkinterDnD.Tk):
     # In this class all the widgets and methods of the GUI.
     def __init__(self):
         super().__init__()
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.9.1'
+        self.version = '0.10.1'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -108,13 +109,27 @@ class SammyGUI(tk.Tk):
         self.ffmpeg_button.grid(row=0, column=3, sticky='W', pady=5, padx=10)
 
         self.batch_listbox = tk.Listbox(self.batch_frame, yscrollcommand=self.batch_yscrollbar.set,
-                                        xscrollcommand=self.batch_xscrollbar.set, width=180, height=23)
+                                        xscrollcommand=self.batch_xscrollbar.set, width=180, height=23,selectmode=EXTENDED)
         self.batch_listbox.configure(activestyle='none', highlightthickness=0)
 
         self.batch_yscrollbar.configure(command=self.batch_listbox.yview)
         self.batch_xscrollbar.configure(command=self.batch_listbox.xview)
 
         self.batch_listbox.grid(row=1, column=0, columnspan=4)
+
+        def drop(event):
+            if event.data:
+                ff = self.batch_listbox.tk.splitlist(event.data)
+                for f in ff:
+                    if os.path.isfile(f):
+                        if not os.path.abspath(f) in self.check_this['F'] and f != '':
+                            self.check_this['F'].append(os.path.abspath(f))
+                    elif os.path.isdir(f):
+                        if not f in self.check_this['D'] and f != '':
+                            self.check_this['D'].append(os.path.abspath(f))
+                self.update_batch()
+        self.batch_listbox.drop_target_register(DND_FILES)
+        self.batch_listbox.dnd_bind('<<Drop>>', drop)
 
         self.batch_frame.bind(
             '<Leave>', lambda x: self.batch_listbox.selection_clear(0, END))
@@ -226,18 +241,20 @@ class SammyGUI(tk.Tk):
         self.transfer_dst_entry.configure(state=DISABLED)
 
     def remove_item(self):
-        # Deletes the selected item from the batch listbox.
         try:
-            item_text = self.batch_listbox.get(
-                self.batch_listbox.curselection())
-            if item_text[2] == 'F':
-                self.check_this['F'].remove(item_text.split('"')[1])
-            elif item_text[2] == 'D':
-                self.check_this['D'].remove(item_text.split('"')[1])
+            items_list = []
+            for item in self.batch_listbox.curselection():
+                items_list.append(self.batch_listbox.get(item))
 
-            self.batch_listbox.delete(self.batch_listbox.curselection())
+            for item_text in items_list:
+                if item_text[2] == 'F':
+                    self.check_this['F'].remove(item_text.split('"')[1])
+                elif item_text[2] == 'D':
+                    self.check_this['D'].remove(item_text.split('"')[1])
+
+            self.update_batch()
             self.batch_label.configure(
-                text='Queue (%s)' % str(self.batch_listbox.size()))
+                    text='Queue (%s)' % str(self.batch_listbox.size()))
         except:
             pass
 
@@ -674,7 +691,7 @@ class CheckSammy():
                     for file in files:
                         to_hash = self.join_path(root, file)
                         new_dict[to_hash.replace(
-                            path, '')[1:]] = self.calculate_md5(to_hash)
+                            path, '')[1:].replace(os.sep,'/')] = self.calculate_md5(to_hash)
 
                 for obj in previous_dict:
                     if not obj in new_dict:
@@ -719,9 +736,10 @@ class CheckSammy():
 
                 for root, folders, files in os.walk(path):
                     for file in files:
+                        file = file
                         to_hash = self.join_path(root, file)
                         new_dict[to_hash.replace(
-                            path, '')[1:]] = self.calculate_xxHash(to_hash)
+                            path, '')[1:].replace(os.sep,'/')] = self.calculate_xxHash(to_hash)
 
                 for obj in previous_dict:
                     if not obj in new_dict:
