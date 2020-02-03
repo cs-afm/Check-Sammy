@@ -22,17 +22,23 @@ import datetime
 import shutil
 import subprocess
 import xxhash
-from TkinterDnD2 import *
+try:
+	from TkinterDnD2 import *
+	tkint = TkinterDnD2
+	print('Drag and drop enabled\n')
+except:
+	tkint = tk
+	print('Drag and drop not enabled\n')
 
 
-class SammyGUI(TkinterDnD.Tk):
+class SammyGUI(tkint.Tk):
     # In this class all the widgets and methods of the GUI.
     def __init__(self):
         super().__init__()
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.10.1'
+        self.version = '0.10.2'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -128,8 +134,12 @@ class SammyGUI(TkinterDnD.Tk):
                         if not f in self.check_this['D'] and f != '':
                             self.check_this['D'].append(os.path.abspath(f))
                 self.update_batch()
-        self.batch_listbox.drop_target_register(DND_FILES)
-        self.batch_listbox.dnd_bind('<<Drop>>', drop)
+
+        try:
+            self.batch_listbox.drop_target_register(DND_FILES)
+            self.batch_listbox.dnd_bind('<<Drop>>', drop)
+        except:
+            pass
 
         self.batch_frame.bind(
             '<Leave>', lambda x: self.batch_listbox.selection_clear(0, END))
