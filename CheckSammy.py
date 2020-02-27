@@ -23,12 +23,12 @@ import shutil
 import subprocess
 import xxhash
 try:
-	from TkinterDnD2 import *
-	tkint = TkinterDnD2
-	print('Drag and drop enabled\n')
+    from TkinterDnD2 import *
+    tkint = TkinterDnD2
+    print('Drag and drop enabled\n')
 except:
-	tkint = tk
-	print('Drag and drop not enabled\n')
+    tkint = tk
+    print('Drag and drop not enabled\n')
 
 
 class SammyGUI(tkint.Tk):
@@ -38,7 +38,7 @@ class SammyGUI(tkint.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.10.2'
+        self.version = '0.10.3'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -473,7 +473,7 @@ class SammyGUI(tkint.Tk):
 
         if transfer == False:
             self.status_label.configure(text='Done')
-###################
+
     def create_xxHash(self,transfer=False,dst=None):
         self.status_label.configure(text='Working...')
 
@@ -595,7 +595,7 @@ class SammyGUI(tkint.Tk):
                             if os.name == 'nt':
                                 subprocess.call(['robocopy',os.path.abspath(os.path.dirname(file)),os.path.abspath(dst),os.path.basename(file)])
                             else:
-                                subprocess.call(['cp',file,dst])
+                                subprocess.call(['rsync','--archive','--progress',file,dst])
                         else:
                             raise FileExistsError
                         check_transferred['F'].append(new_copy)
@@ -604,11 +604,11 @@ class SammyGUI(tkint.Tk):
 
                     for dir in self.check_this['D']:
                         new_copy = self.checksummer.join_path(dst,dir.split(os.sep)[-1])
-                        # shutil.copytree(dir,new_copy)
                         if os.name == 'nt':
                             subprocess.call(['robocopy',os.path.abspath(dir),os.path.join(os.path.abspath(dst),os.path.basename(dir)),'/E'])
                         else:
-                            subprocess.call(['cp','-R',dir,dst])
+                            os.mkdir(new_copy)
+                            subprocess.call(['rsync','--archive','--progress',dir,dst])
                         check_transferred['D'].append(new_copy)
                     print('Done\n')
                     print('Comparing difference...')
@@ -636,41 +636,23 @@ class CheckSammy():
     def join_path(self,a,b):
         return a + '/' + b
 
-    # def progress_bar(self, file, percent):
-    #     arrow = '-' * (int(percent/10) - 1) + '>'
-    #     spaces = ' ' * (10 - len(arrow))
-    #
-    #     if percent < 100:
-    #         sys.stdout.write(f'\rHashing: {file} - Percent: [{arrow+spaces}] {percent}%')
-    #         sys.stdout.flush()
-    #     else:
-    #         sys.stdout.write(f'\rHashing: {file} - Percent: [{arrow+spaces}] Done')
-    #         sys.stdout.flush()
-
     def calculate_md5(self, file):
         # Calculates the md5 for the selected file.
         h = hashlib.md5()
 
+        print(f'Calculating hash for {file}')
         with open(file, 'rb') as file_data:
             file_size = size_to_hash = os.path.getsize(file)
             #percent = 0
             for chunk in iter(lambda: file_data.read(4096), b''):
                 h.update(chunk)
-                # size_to_hash -= 4096
-                # if size_to_hash > 0:
-                #     new_percent = 100 - (round(size_to_hash/file_size*10) * 10)
-                # else:
-                #     new_percent = 100
-                # if new_percent > percent:
-                #     percent = new_percent
-                #     self.progress_bar(os.path.basename(file), percent)
 
-            #print('')
             return(h.hexdigest())
 
     def calculate_xxHash(self, file):
         h = xxhash.xxh64()
 
+        print(f'Calculating hash for {file}')
         with open(file, 'rb') as file_data:
             for chunk in iter(lambda: file_data.read(4096), b''):
                 h.update(chunk)
