@@ -38,7 +38,7 @@ class SammyGUI(tkint.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.10.3'
+        self.version = '0.10.4'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -177,7 +177,7 @@ class SammyGUI(tkint.Tk):
         self.transfer_window.resizable(False, False)
 
         self.transfer_dst_button = tk.Button(self.transfer_window, text='Select target folder:',command=self.select_target_directory)
-        self.transfer_dst_button.place(x=250,y=20,width=150)
+        self.transfer_dst_button.place(relx=0.3,y=20,relwidth=0.4)
 
         self.transfer_dst_entry = tk.Entry(self.transfer_window,state=DISABLED,width=100)
         self.transfer_dst_entry.place(x=15,y=70,width=620)
@@ -192,7 +192,7 @@ class SammyGUI(tkint.Tk):
 
         self.transfer_start_button = tk.Button(self.transfer_window, text='Start transfer',command=lambda: threading.Thread(
             target=self.safe_transfer, args=()).start())
-        self.transfer_start_button.place(x=275,y=110)
+        self.transfer_start_button.place(relx=0.35,y=110,relwidth=0.3)
 
     def open_ffmpeg_options(self):
         x = self.winfo_x()
@@ -400,11 +400,17 @@ class SammyGUI(tkint.Tk):
         self.checked = {'Ok': [], 'Corrupted': [],
                         'No md5': [], 'Missing file': [], 'New file': []}
 
-    def save_report(self):
+    def save_report(self,auto=False,path=None):
         # Stores report in a .txt file.
         try:
-            with open(filedialog.asksaveasfilename(defaultextension='.txt', filetypes=(('Text file', '*.txt'), ('All files', '*.*'))), 'w+', encoding='utf8') as dot_txt:
-                dot_txt.write(self.report_text.get(1.0, END))
+            if auto == True:
+                date_report = datetime.datetime.now().strftime('%Y%m%d-%H.%M')
+                report_path = os.path.join(path,f'cs-report_{date_report}.txt')
+                with open(report_path, 'w+', encoding='utf8') as dot_txt:
+                    dot_txt.write(self.report_text.get(1.0, END))
+            else:
+                with open(filedialog.asksaveasfilename(defaultextension='.txt', filetypes=(('Text file', '*.txt'), ('All files', '*.*'))), 'w+', encoding='utf8') as dot_txt:
+                    dot_txt.write(self.report_text.get(1.0, END))
         except FileNotFoundError:
             pass
 
@@ -617,6 +623,8 @@ class SammyGUI(tkint.Tk):
                         self.compare_checksums(True,check_transferred,hash_type='md5')
                     else:
                         self.compare_checksums(True,check_transferred,hash_type='xxHash')
+
+                    self.save_report(auto=True,path=dst)
 
                     print(f'Done after {datetime.datetime.now()-before}')
                     print('----------')
