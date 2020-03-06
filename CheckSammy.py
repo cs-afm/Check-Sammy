@@ -38,7 +38,7 @@ class SammyGUI(tkint.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.10.4'
+        self.version = '0.11.0'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -152,16 +152,19 @@ class SammyGUI(tkint.Tk):
         self.reset_button.grid(sticky='N', pady=10)
 
         self.operation_type = IntVar()
-        self.calculate = tk.Radiobutton(self.control_frame, text='Calculate md5', variable=self.operation_type,
-                                        value=0, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
-        self.calculate.grid(row=1, column=0, sticky='w')
+        self.calculate_m = tk.Radiobutton(self.control_frame, text='Calculate md5', variable=self.operation_type,
+                                        value=0, tristatevalue=5, command=lambda: self.status_label.configure(text='Ready'))
+        self.calculate_m.grid(row=1, column=0, sticky='w')
+        self.calculate_x = tk.Radiobutton(self.control_frame, text='Calculate xxHash', variable=self.operation_type,
+                                        value=1, tristatevalue=5, command=lambda: self.status_label.configure(text='Ready'))
+        self.calculate_x.grid(row=2, column=0, sticky='w')
         self.difference = tk.Radiobutton(self.control_frame, text='Check difference', variable=self.operation_type,
-                                         value=1, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
-        self.difference.grid(row=2, column=0, sticky='w')
+                                         value=2, tristatevalue=5, command=lambda: self.status_label.configure(text='Ready'))
+        self.difference.grid(row=3, column=0, sticky='w')
         self.streamhash = tk.Radiobutton(self.control_frame, text='FFmpeg', variable=self.operation_type,
-                                         value=2, tristatevalue=4, command=lambda: self.status_label.configure(text='Ready'))
-        self.streamhash.grid(row=3, column=0, sticky='w')
-        self.operation_type.set(3)
+                                         value=3, tristatevalue=5, command=lambda: self.status_label.configure(text='Ready'))
+        self.streamhash.grid(row=4, column=0, sticky='w')
+        self.operation_type.set(0)
 
     def open_safe_transfer(self):
         x = self.winfo_x()
@@ -297,7 +300,7 @@ class SammyGUI(tkint.Tk):
                 self.check_this['D'].append(
                     os.path.abspath(self.checksummer.join_path(root, d)))
             for f in files:
-                if not '.md5' in f:
+                if not '.md5' in f and not '.xxh' in f:
                     self.check_this['F'].append(
                         os.path.abspath(self.checksummer.join_path(root, f)))
             self.update_batch()
@@ -380,7 +383,7 @@ class SammyGUI(tkint.Tk):
 
         if no_checksum_count > 0:
             self.report_text.insert(
-                END, 'The following .md5 files are missing:\n\n')
+                END, "The following files don't have a valid hash:\n\n")
             for obj in self.checked['No md5']:
                 self.report_text.insert(END, "'" + obj + "'\n")
             self.report_text.insert(END, '---\n\n\n')
@@ -432,14 +435,18 @@ class SammyGUI(tkint.Tk):
             if self.operation_type.get() == 0:
                 self.create_md5()
 
-            elif self.operation_type.get() == 1:
-                self.compare_checksums()
+            if self.operation_type.get() == 1:
+                self.create_xxHash()
 
             elif self.operation_type.get() == 2:
+                self.compare_checksums()
+
+            elif self.operation_type.get() == 3:
                 self.create_streamhash()
 
-            else:
-                self.status_label.configure(text="Sammy's confused...")
+            # else:
+            #     print(self.operation_type.get())
+            #     self.status_label.configure(text="Sammy's confused...")
 
     def create_md5(self,transfer=False,dst=None):
         self.status_label.configure(text='Working...')
@@ -519,25 +526,20 @@ class SammyGUI(tkint.Tk):
         if transfer == False:
             self.status_label.configure(text='Done')
 
-    def compare_checksums(self, transfer=False, check_transferred=None, hash_type='md5'):
+    def compare_checksums(self, transfer=False, check_transferred=None):
         self.status_label.configure(text='Working...')
         to_check = self.check_this if transfer == False else check_transferred
 
         workers = mp.Pool(8)
 
-        if hash_type == 'md5':
-            workers.map(self.checksummer.check_md5, to_check['F'])
-        elif hash_type == 'xxHash':
-            workers.map(self.checksummer.check_xxh, to_check['F'])
+        workers.map(self.checksummer.check_md5, to_check['F'])
 
         a = []
         for dir in to_check['D']:
             a.append((dir, 1))
 
-        if hash_type == 'md5':
-            workers.starmap(self.checksummer.check_md5, a)
-        elif hash_type == 'xxHash':
-            workers.starmap(self.checksummer.check_xxh, a)
+        workers.starmap(self.checksummer.check_md5, a)
+
         workers.close()
         workers.join()
 
@@ -619,10 +621,7 @@ class SammyGUI(tkint.Tk):
                     print('Done\n')
                     print('Comparing difference...')
 
-                    if self.hash_type.get() == 0:
-                        self.compare_checksums(True,check_transferred,hash_type='md5')
-                    else:
-                        self.compare_checksums(True,check_transferred,hash_type='xxHash')
+                    self.compare_checksums(True,check_transferred)
 
                     self.save_report(auto=True,path=dst)
 
@@ -672,19 +671,28 @@ class CheckSammy():
         target_name = os.path.basename(path) # File or directory
 
         if switch == 0:
-            try:
+
+            if os.path.isfile(path + '.md5'):
                 previous_checksum = json.load(open(path + '.md5'))[target_name]
                 new_checksum = self.calculate_md5(path)
                 if previous_checksum == new_checksum:
                     puppy.checked['Ok'].append(target_name)
                 else:
                     puppy.checked['Corrupted'].append(target_name)
-            except FileNotFoundError:
-                puppy.checked['No md5'].append(target_name + '.md5')
+            elif os.path.isfile(path + '.xxh'):
+                previous_checksum = json.load(open(path + '.xxh'))[target_name]
+                new_checksum = self.calculate_xxHash(path)
+                if previous_checksum == new_checksum:
+                    puppy.checked['Ok'].append(target_name)
+                else:
+                    puppy.checked['Corrupted'].append(target_name)
+            else:
+                puppy.checked['No md5'].append(target_name)
 
         elif switch == 1:
             new_dict = {'PARENT FOLDER': target_name}
-            try:
+
+            if os.path.isfile(path + '.md5'):
                 previous_dict = json.load(open(path + '.md5'))
 
                 for root, folders, files in os.walk(path):
@@ -710,28 +718,7 @@ class CheckSammy():
                         else:
                             puppy.checked['Corrupted'].append(
                                 self.join_path(new_dict['PARENT FOLDER'], obj))
-
-            except FileNotFoundError:
-                puppy.checked['No md5'].append(new_dict['PARENT FOLDER'] + '.md5')
-
-    def check_xxh(self, path, switch=0):
-        # Calculates a new checksum and compares it with the one stored in the json.
-        target_name = os.path.basename(path) # File or directory
-
-        if switch == 0:
-            try:
-                previous_checksum = json.load(open(path + '.xxh'))[target_name]
-                new_checksum = self.calculate_xxHash(path)
-                if previous_checksum == new_checksum:
-                    puppy.checked['Ok'].append(target_name)
-                else:
-                    puppy.checked['Corrupted'].append(target_name)
-            except FileNotFoundError:
-                puppy.checked['No md5'].append(target_name + '.xxh')
-
-        elif switch == 1:
-            new_dict = {'PARENT FOLDER': target_name}
-            try:
+            elif os.path.isfile(path + '.xxh'):
                 previous_dict = json.load(open(path + '.xxh'))
 
                 for root, folders, files in os.walk(path):
@@ -759,8 +746,8 @@ class CheckSammy():
                             puppy.checked['Corrupted'].append(
                                 self.join_path(new_dict['PARENT FOLDER'], obj))
 
-            except FileNotFoundError:
-                puppy.checked['No md5'].append(new_dict['PARENT FOLDER'] + '.xxh')
+            else:
+                puppy.checked['No md5'].append(new_dict['PARENT FOLDER'])
 
     def save_md5(self, file):
         # Starts the calculate_md5 method and stores the results in a dictionary.
