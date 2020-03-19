@@ -38,7 +38,7 @@ class SammyGUI(tkint.Tk):
 
         self.checksummer = CheckSammy()
 
-        self.version = '0.11.0'
+        self.version = '0.11.1'
         self.title('Check Sammy %s' % self.version)
 
         if os.name == 'nt':
@@ -202,7 +202,7 @@ class SammyGUI(tkint.Tk):
         y = self.winfo_y()
 
         self.ffmpeg_window = tk.Toplevel()
-        self.ffmpeg_window.geometry(f'400x160+{x+145}+{y+80}')
+        self.ffmpeg_window.geometry(f'600x160+{x+145}+{y+80}')
         self.ffmpeg_window.grab_set()
         self.ffmpeg_window.title('FFmpeg Options')
         if os.name == 'nt':
