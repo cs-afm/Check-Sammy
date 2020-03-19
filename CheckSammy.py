@@ -22,13 +22,16 @@ import datetime
 import shutil
 import subprocess
 import xxhash
-try:
-    from TkinterDnD2 import *
-    tkint = TkinterDnD2
-    print('Drag and drop enabled\n')
-except:
-    tkint = tk
-    print('Drag and drop not enabled\n')
+#try:
+import TkinterDnD2
+from TkinterDnD2 import *
+tkint = TkinterDnD2.TkinterDnD
+print('Drag and drop enabled\n')
+### - tkdnd2.8 --> /usr/share/tcltk/ - ###
+### - TkinterDnD2 --> /usr/lib/python3.6/ - ###
+# except:
+#     tkint = tk
+#     print('Drag and drop not enabled\n')
 
 
 class SammyGUI(tkint.Tk):
